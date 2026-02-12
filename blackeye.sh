@@ -369,31 +369,35 @@ echo ""
 else
 
 printf "\e[1;92m[\e[0m*\e[1;92m] Downloading Ngrok...\n"
-arch=$(uname -a | grep -o 'arm' | head -n1)
-arch2=$(uname -a | grep -o 'Android' | head -n1)
-if [[ $arch == *'arm'* ]] || [[ $arch2 == *'Android'* ]] ; then
-wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm.zip > /dev/null 2>&1
+arch=$(uname -m)
+if [[ $arch == *'aarch64'* ]] || [[ $arch == *'arm'* ]] ; then
+wget --no-check-certificate https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz -O ngrok.tgz 2>&1 | grep -i "saved"
 
-if [[ -e ngrok-stable-linux-arm.zip ]]; then
-unzip ngrok-stable-linux-arm.zip > /dev/null 2>&1
+if [[ -e ngrok.tgz ]]; then
+tar -xzf ngrok.tgz > /dev/null 2>&1
 chmod +x ngrok
-rm -rf ngrok-stable-linux-arm.zip
+rm -rf ngrok.tgz
 else
-printf "\e[1;93m[!] Download error... Termux, run:\e[0m\e[1;77m pkg install wget\e[0m\n"
-exit 1
+printf "\e[1;93m[!] Download error... Trying alternative method...\e[0m\n"
+curl -o ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
+tar -xzf ngrok.tgz
+chmod +x ngrok
+rm -rf ngrok.tgz
 fi
 
-
-
 else
-wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-386.zip > /dev/null 2>&1 
-if [[ -e ngrok-stable-linux-386.zip ]]; then
-unzip ngrok-stable-linux-386.zip > /dev/null 2>&1
+wget --no-check-certificate https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz 2>&1 | grep -i "saved"
+if [[ -e ngrok.tgz ]]; then
+tar -xzf ngrok.tgz > /dev/null 2>&1
 chmod +x ngrok
-rm -rf ngrok-stable-linux-386.zip
+rm -rf ngrok.tgz
+printf "\e[1;92m[\e[0m*\e[1;92m] Ngrok downloaded successfully!\e[0m\n"
 else
-printf "\e[1;93m[!] Download error... \e[0m\n"
-exit 1
+printf "\e[1;93m[!] Download error... Trying alternative method...\e[0m\n"
+curl -o ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+tar -xzf ngrok.tgz
+chmod +x ngrok
+rm -rf ngrok.tgz
 fi
 fi
 fi
